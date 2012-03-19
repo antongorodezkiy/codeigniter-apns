@@ -1,12 +1,51 @@
 
 Codeigniter-apns
+(c) 2012, Anton Gorodezkiy
 
 This is codeigniter library to work with Apple Push Notifications Service
 It based on APNS Copyright (c) 2010 Benjamin Ortuzar Seconde <bortuzar@gmail.com>
 
+Basic usage for pushing (controller):
+
+	function send_notifications()
+	{
+		$this->load->library('apn');
+		$this->apn->payloadMethod = 'enhance'; // you can turn on this method for debuggin purpose
+		$this->apn->connectToPush();
+		
+		$send_result = $this->apn->sendMessage($device_token, 'Test notif #1 (TIME:'.date('H:i:s').')', /*badge*/ 2, /*sound*/ 'default'  );
+			
+		if($send_result)
+			log_message('debug','Sending successful');
+		else
+			log_message('error',$this->apn->error);
+	
+		
+		$this->apn->disconnectPush();
+	}
 
 ----------------
 Codeigniter-apns
+(c) 2012, Anton Gorodezkiy
 
 Это библиотека для codeigniter для взаимодействия с Apple Push Notifications Service
 Библиотека основана на коде APNS Copyright (c) 2010 Benjamin Ortuzar Seconde <bortuzar@gmail.com>
+
+Пример базового использования (controller):
+
+	function send_notifications()
+	{
+		$this->load->library('apn');
+		$this->apn->payloadMethod = 'enhance'; // включите этот метод для отладки
+		$this->apn->connectToPush();
+		
+		$send_result = $this->apn->sendMessage($device_token, 'Тестовое уведомление #1 (TIME:'.date('H:i:s').')', /*badge*/ 2, /*sound*/ 'default'  );
+			
+		if($send_result)
+			log_message('debug','Отправлено успешно');
+		else
+			log_message('error',$this->apn->error);
+	
+		
+		$this->apn->disconnectPush();
+	}

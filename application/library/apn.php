@@ -432,6 +432,4 @@ class APN
 		$this->disconnectFeedback();
 	}
 
-}//end of class
-?>
-
+}
