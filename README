@@ -11,7 +11,10 @@ Codeigniter-apns
 		$this->load->library('apn');
 		$this->apn->payloadMethod = 'enhance'; // включите этот метод для отладки
 		$this->apn->connectToPush();
-		
+
+		// добавление собственных переменных в notification
+		$this->apn->setData(array( 'someKey' => true ));
+
 		$send_result = $this->apn->sendMessage($device_token, 'Тестовое уведомление #1 (TIME:'.date('H:i:s').')', /*badge*/ 2, /*sound*/ 'default'  );
 			
 		if($send_result)
@@ -39,6 +42,9 @@ Basic usage for pushing (controller):
 		$this->apn->payloadMethod = 'enhance'; // you can turn on this method for debuggin purpose
 		$this->apn->connectToPush();
 		
+		// adding custom variables to the notification
+		$this->apn->setData(array( 'someKey' => true ));
+
 		$send_result = $this->apn->sendMessage($device_token, 'Test notif #1 (TIME:'.date('H:i:s').')', /*badge*/ 2, /*sound*/ 'default'  );
 			
 		if($send_result)
