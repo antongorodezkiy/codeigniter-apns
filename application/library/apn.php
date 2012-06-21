@@ -48,6 +48,7 @@ class APN
 	protected $idCounter = 0;
 	protected $expiry;
 	protected $allowReconnect = true;
+	protected $additionalData = array();
 	protected $apnResonses = array(
 		0 => 'No errors encountered',
 		1 => 'Processing error',
@@ -77,20 +78,21 @@ class APN
 		stream_context_set_option($ctx, 'ssl', 'local_cert', $this->keyCertFilePath);
 		stream_context_set_option($ctx, 'ssl', 'passphrase', $this->passphrase);
 
-		$stream = stream_socket_client($server, $err, $errstr, $this->timeout, STREAM_CLIENT_CONNECT, $ctx);
-
-		stream_set_timeout($stream,20);
+		$stream = stream_socket_client($server, $err, $errstr, $this->timeout, STREAM_CLIENT_CONNECT|STREAM_CLIENT_PERSISTENT, $ctx);
+		log_message('debug',"APN: Maybe some errors: $err: $errstr");
+		
 		
 		if (!$stream) {
 			
 			if ($err)
-				show_error("APN Failed to connect: $err $errstrn");
+				show_error("APN Failed to connect: $err $errstr");
 			else
 				show_error("APN Failed to connect: Something wrong with context");
 				
 			return false;
 		}
 		else {
+			stream_set_timeout($stream,20);
 			log_message('debug',"APN: Opening connection to: {$server}");
 			return $stream;
 		}
@@ -110,6 +112,12 @@ class APN
 
 	   $body = array();
 
+	   // additional data
+			if (is_array($this->additionalData) && count($this->additionalData))
+			{
+				$body = $this->additionalData;
+			}
+	   
 		//message
 			$body['aps'] = array('alert' => $message);
 
@@ -120,6 +128,7 @@ class APN
 		 //sound
 			if ($sound)
 				$body['aps']['sound'] = $sound;
+				
 
 	   $payload = json_encode($body);
 	   log_message('debug',"APN: generatePayload '$payload'");
@@ -140,16 +149,18 @@ class APN
 
 		log_message('debug',"APN: sendPayloadSimple to '$deviceToken'");
 
-		$msg = pack("C",0) 									// command
-			. pack("n",32)									// token length
+		$msg = chr(0) 									// command
+			. pack('n',32)									// token length
 			. pack('H*', $deviceToken)						// device token
-			. pack("n",strlen($payload))					// payload length
+			. pack('n',strlen($payload))					// payload length
 			. $payload;										// payload
-			
-		$result = fwrite($this->pushStream, $msg);
+		
+		log_message('debug',"APN: payload: '$msg'");
+		log_message('debug',"APN: payload length: '".strlen($msg)."'");
+		$result = fwrite($this->pushStream, $msg, strlen($msg));
 		
 		if ($result)
-			return $result == strlen($msg);
+			return true;
 		else
 			return false;
 	}
@@ -167,24 +178,24 @@ class APN
 
 		log_message('debug',"APN: sendPayloadEnhance to '$deviceToken'");
 
-		$msg = pack("C",1) 									// command
-			. pack("N",$this->idCounter)					// identifier
+		$msg = chr(1)										// command
+			. pack("N",time())								// identifier
 			. pack("N",time() + $expiry)					// expiry
-			. pack("n",32)									// token length
+			. pack('n',32)									// token length
 			. pack('H*', $deviceToken)						// device token
-			. pack("n",strlen($payload))					// payload length
-			. $payload;										// payload
+			. pack('n',strlen($payload))					// payload length
+			. $payload;
+			
+		$response = @unpack('Ccommand/Nidentifier/Nexpiry/ntoken_length/H*device_token/npayload_length', $msg);// payload
 		
-		$result = fwrite($this->pushStream, $msg);
+		log_message('debug',"APN: unpack: '".print_r($response,true)."'");
+		log_message('debug',"APN: payload: '$msg'");
+		log_message('debug',"APN: payload length: '".strlen($msg)."'");
+		$result = fwrite($this->pushStream, $msg, strlen($msg));
 		
 		if ($result)
 		{
-			$result = ($result == strlen($msg));
-			
-			if ($result)
-			{
-				return $this->getPayloadStatuses();
-			}
+			return $this->getPayloadStatuses();
 		}
 	
 		return false;
@@ -193,7 +204,8 @@ class APN
 	
 	protected function timeoutSoon($left_seconds = 5)
 	{
-		return round(microtime(true) - $this->connection_start) >= ($this->timeout - $left_seconds);
+		$t = ( (round(microtime(true) - $this->connection_start) >= ($this->timeout - $left_seconds)));
+		return (bool)$t;
 	}
 	
 	
@@ -238,12 +250,19 @@ class APN
 	 */
 	public function connectToPush()
 	{
-		log_message('info',"APN: connectToPush");
-		$this->pushStream = $this->connect($this->pushServer);
+		if (!$this->pushStream)
+		{
+			log_message('debug',"APN: connectToPush");
 		
-		if ($this->pushStream)
-			$this->connection_start = microtime(true);
+			$this->pushStream = $this->connect($this->pushServer);
 			
+			if ($this->pushStream)
+			{
+				$this->connection_start = microtime(true);
+				//stream_set_blocking($this->pushStream,0);
+			}
+		}
+		
 		return $this->pushStream;
 	}
 	
@@ -261,8 +280,7 @@ class APN
 	 */
 	function disconnectPush()
 	{
-		
-		log_message('info',"APN: disconnectPush");
+		log_message('debug',"APN: disconnectPush");
 		if ($this->pushStream && is_resource($this->pushStream))
 		{
 			$this->connection_start = 0;
@@ -286,9 +304,9 @@ class APN
 	
 	function reconnectPush()
 	{
-		$this->apn->disconnectPush();
+		$this->disconnectPush();
 				
-		if ($this->apn->connectToPush())
+		if ($this->connectToPush())
 		{
 			log_message('debug',"APN: reconnect");
 			return true;
@@ -357,18 +375,27 @@ class APN
 	 */
 	function getPayloadStatuses()
 	{
+		
 		$read = array($this->pushStream);
 		$null = null;
-		$changedStreams = stream_select($read, $null, $null, 0, 1000000);
+		$changedStreams = stream_select($read, $null, $null, 0, 2000000);
 
-		if ($changedStreams === false) {    
+		if ($changedStreams === false)
+		{    
 			log_message('error',"APN Error: Unabled to wait for a stream availability");
-		} elseif ($changedStreams > 0) {
+		}
+		elseif ($changedStreams > 0)
+		{
 			
 			$responseBinary = fread($this->pushStream, 6);
 			if ($responseBinary !== false || strlen($responseBinary) == 6) {
-		
+				
+				if (!$responseBinary)
+					return true;
+				
 				$response = @unpack('Ccommand/Cstatus_code/Nidentifier', $responseBinary);
+				
+				log_message('debug','APN: debugPayload response - '.print_r($response,true));
 				
 				if ($response && $response['status_code'] > 0)
 				{
@@ -422,6 +449,30 @@ class APN
 	    return $feedback_tokens;
 	}
 
+	
+	/**
+	* Sets additional data which will be send with main apn message
+	*
+	* @param <array> $data
+	* @return <array>
+	*/
+	public function setData($data)
+	{
+		if (!is_array($data))
+		{
+			log_message('error',"APN: cannot add additional data - not an array");
+			return false;
+		}
+		
+		if (isset($data['apn']))
+		{
+			log_message('error',"APN: cannot add additional data - key 'apn' is reserved");
+			return false;
+		}
+		
+		return $this->additionalData = $data;
+	}
+	
 
 
 	/**
@@ -432,4 +483,6 @@ class APN
 		$this->disconnectFeedback();
 	}
 
-}
+}//end of class
+
+
