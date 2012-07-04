@@ -26,6 +26,29 @@ Codeigniter-apns
 		$this->apn->disconnectPush();
 	}
 	
+	// для получения идентификаторов устройств, на которых приложение больше не установлено
+	public function apn_feedback()
+	{
+		$this->load->library('apn');
+
+		$unactive = $this->apn->getFeedbackTokens();
+		
+		if (!count($unactive))
+		{
+			log_message('info','Feedback: No devices found. Stopping.');
+			return false;
+		}
+		
+		foreach($unactive as $u)
+		{
+			$devices_tokens[] = $u['devtoken'];
+		}
+	
+		/*
+		print_r($unactive) -> Array ( [0] => Array ( [timestamp] => 1340270617 [length] => 32 [devtoken] => 002bdf9985984f0b774e78f256eb6e6c6e5c576d3a0c8f1fd8ef9eb2c4499cb4 ) ) 
+		*/
+	}
+	
 --------------------------------------
 	
 Codeigniter-apns
@@ -54,4 +77,27 @@ Basic usage for pushing (controller):
 	
 		
 		$this->apn->disconnectPush();
+	}
+	
+	// designed for retreiving devices, on which app not installed anymore
+	public function apn_feedback()
+	{
+		$this->load->library('apn');
+
+		$unactive = $this->apn->getFeedbackTokens();
+		
+		if (!count($unactive))
+		{
+			log_message('info','Feedback: No devices found. Stopping.');
+			return false;
+		}
+		
+		foreach($unactive as $u)
+		{
+			$devices_tokens[] = $u['devtoken'];
+		}
+	
+		/*
+		print_r($unactive) -> Array ( [0] => Array ( [timestamp] => 1340270617 [length] => 32 [devtoken] => 002bdf9985984f0b774e78f256eb6e6c6e5c576d3a0c8f1fd8ef9eb2c4499cb4 ) ) 
+		*/
 	}
