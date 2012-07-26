@@ -173,7 +173,10 @@ class APN
 	 * @param <string> $payload
 	 */
 	protected function sendPayloadEnhance($deviceToken, $payload, $expiry = 86400) {
-
+		
+		if (!is_resource($this->pushStream))
+			$this->reconnectPush();
+		
 		$this->idCounter++;		
 
 		log_message('debug',"APN: sendPayloadEnhance to '$deviceToken'");
@@ -250,7 +253,7 @@ class APN
 	 */
 	public function connectToPush()
 	{
-		if (!$this->pushStream)
+		if (!$this->pushStream or !is_resource($this->pushStream))
 		{
 			log_message('debug',"APN: connectToPush");
 		
