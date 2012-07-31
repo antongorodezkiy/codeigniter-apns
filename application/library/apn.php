@@ -177,6 +177,7 @@ class APN
 		if (!is_resource($this->pushStream))
 			$this->reconnectPush();
 		
+		
 		$this->idCounter++;		
 
 		log_message('debug',"APN: sendPayloadEnhance to '$deviceToken'");
@@ -346,6 +347,14 @@ class APN
 	public function sendMessage($deviceToken, $message, $badge = NULL, $sound = NULL, $expiry = '')
 	{
 		$this->error = '';
+		
+		if (!ctype_xdigit($deviceToken))
+		{
+			log_message('debug',"APN: Error - '$deviceToken' token is invalid. Provided device token contains not hexadecimal chars");
+			$this->error = 'Invalid device token. Provided device token contains not hexadecimal chars';
+			return false;
+		}
+		
 		// restart the connection
 		$this->tryReconnectPush();
 		
