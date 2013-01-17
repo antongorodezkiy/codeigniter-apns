@@ -124,6 +124,9 @@ class APN
 		//badge
 			if ($badge)
 				$body['aps']['badge'] = $badge;
+			
+			if ($badge == 'clear')
+				$body['aps']['badge'] = 0;
 
 		 //sound
 			if ($sound)
