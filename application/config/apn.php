@@ -32,7 +32,7 @@ $config['PassPhrase'] = '12345';
 */
 $config['Sandbox'] = true;
 $config['PushGatewaySandbox'] = 'ssl://gateway.sandbox.push.apple.com:2195';
-$config['PushGateway'] = 'ssl://gateway.sandbox.push.apple.com:2195';
+$config['PushGateway'] = 'ssl://gateway.push.apple.com:2195';
 
 $config['FeedbackGatewaySandbox'] = 'ssl://feedback.sandbox.push.apple.com:2196';
 $config['FeedbackGateway'] = 'ssl://feedback.push.apple.com:2196';
