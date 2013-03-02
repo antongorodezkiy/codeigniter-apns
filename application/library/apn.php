@@ -108,7 +108,7 @@ class APN
 	* @param <string> $sound
 	* @return <string>
 	*/
-	protected function generatePayload($message, $badge = NULL, $sound = NULL) {
+	protected function generatePayload($message, $badge = NULL, $sound = NULL, $newstand = false) {
 
 	   $body = array();
 
@@ -117,7 +117,7 @@ class APN
 			{
 				$body = $this->additionalData;
 			}
-	   
+
 		//message
 			$body['aps'] = array('alert' => $message);
 
@@ -131,6 +131,10 @@ class APN
 		 //sound
 			if ($sound)
 				$body['aps']['sound'] = $sound;
+
+		//newstand content-available
+			if($newstand)
+				$body['aps']['content-available'] = 1;
 				
 
 	   $payload = json_encode($body);
@@ -347,7 +351,7 @@ class APN
 	 * @param <int> $badge
 	 * @param <string> $sound
 	 */
-	public function sendMessage($deviceToken, $message, $badge = NULL, $sound = NULL, $expiry = '')
+	public function sendMessage($deviceToken, $message, $badge = NULL, $sound = NULL, $expiry = '', $newstand = false)
 	{
 		$this->error = '';
 		
@@ -364,7 +368,7 @@ class APN
 		log_message('info',"APN: sendMessage '$message' to $deviceToken");
 		
 		//generate the payload
-		$payload = $this->generatePayload($message, $badge, $sound);
+		$payload = $this->generatePayload($message, $badge, $sound, $newstand);
 
 		$deviceToken = str_replace(' ', '', $deviceToken);
 		
