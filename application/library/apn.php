@@ -184,25 +184,26 @@ class APN
 		if (!is_resource($this->pushStream))
 			$this->reconnectPush();
 		
-		
 		$this->idCounter++;		
 
 		log_message('debug',"APN: sendPayloadEnhance to '$deviceToken'");
-
-		$msg = chr(1)										// command
-			. pack("N",time())								// identifier
-			. pack("N",time() + $expiry)					// expiry
-			. pack('n',32)									// token length
-			. pack('H*', $deviceToken)						// device token
-			. pack('n',strlen($payload))					// payload length
-			. $payload;
-			
-		$response = @unpack('Ccommand/Nidentifier/Nexpiry/ntoken_length/H*device_token/npayload_length', $msg);// payload
 		
-		log_message('debug',"APN: unpack: '".print_r($response,true)."'");
-		log_message('debug',"APN: payload: '$msg'");
-		log_message('debug',"APN: payload length: '".strlen($msg)."'");
-		$result = fwrite($this->pushStream, $msg, strlen($msg));
+		$payload_length = strlen($payload);
+
+		$request = chr(1) 										// command
+						. pack("N", time())		 				// identifier
+						. pack("N", time() + $expiry) // expiry
+						. pack('n', 32)								// token length
+						. pack('H*', $deviceToken) 		// device token
+						. pack('n', $payload_length) 	// payload length
+						. $payload;
+
+		$request_unpacked = @unpack('Ccommand/Nidentifier/Nexpiry/ntoken_length/H64device_token/npayload_length/A*payload', $request); // payload
+
+		log_message('debug', "APN: request: '$request'");
+		log_message('debug', "APN: unpacked request: '" . print_r($request_unpacked, true) . "'");
+		log_message('debug', "APN: payload length: '" . $payload_length . "'");
+		$result = fwrite($this->pushStream, $request, strlen($request));
 		
 		if ($result)
 		{
